@@ -1,101 +1,65 @@
 local player = game.Players.LocalPlayer
-if not player then
-    warn("Локальный игрок не найден.")
-    return
-end
+local backpack = player:WaitForChild("Backpack")
+local starterGear = player:WaitForChild("StarterGear")
+local replicatedStorage = game:GetService("ReplicatedStorage")
+local seedsFolder = replicatedStorage:WaitForChild("Seed")
 
+local seeds = {
+    "Carrot Seed", "Strawberry Seed", "Blueberry Seed", "Orange Tulip",
+    "Tomato Seed", "Corn Seed", "Daffodil Seed", "Watermelon Seed",
+    "Pumpkin Seed", "Apple Seed", "Bamboo Seed", "Coconut Seed",
+    "Cactus Seed", "Dragon Fruit Seed", "Mango Seed", "Grape Seed",
+    "Mushroom Seed", "Candy Blossom" -- Candy Blossom тоже тут
+}
+
+-- GUI
 local PlayerGui = player:WaitForChild("PlayerGui")
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Parent = PlayerGui
-ScreenGui.Name = "GrowAGardenDuplication"
+ScreenGui.Name = "SeedGiverGui"
 ScreenGui.ResetOnSpawn = false
 
-local Dragging = nil
-local DragInput = nil
-local DragStart = nil
-local StartPosition = nil
+local Frame = Instance.new("Frame")
+Frame.Parent = ScreenGui
+Frame.Size = UDim2.new(0, 270, 0, 70)
+Frame.Position = UDim2.new(0.5, -135, 0.7, 0)
+Frame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+Frame.Active = true
+Frame.Draggable = true -- Самое важное для перетаскивания
 
-local function Update(input)
-    if Dragging then
-        local Delta = input.Position - DragStart
-        ScreenGui.Position = UDim2.new(
-            StartPosition.X.Scale,
-            StartPosition.X.Offset + Delta.X,
-            StartPosition.Y.Scale,
-            StartPosition.Y.Offset + Delta.Y
-        )
+local button = Instance.new("TextButton")
+button.Parent = Frame
+button.Size = UDim2.new(1, -20, 1, -20)
+button.Position = UDim2.new(0, 10, 0, 10)
+button.BackgroundColor3 = Color3.fromRGB(100, 200, 100)
+button.TextColor3 = Color3.new(1, 1, 1)
+button.Font = Enum.Font.SourceSansBold
+button.TextSize = 22
+button.Text = "Выдать 10x всех семян"
+
+-- Функция выдачи настоящих семян
+local function giveRealSeed(seedName)
+    local seedTemplate = seedsFolder:FindFirstChild(seedName)
+    if seedTemplate then
+        local clone = seedTemplate:Clone()
+        clone.Parent = backpack
+
+        -- Для сохранения после смерти
+        local clone2 = seedTemplate:Clone()
+        clone2.Parent = starterGear
+    else
+        warn("Семя не найдено в папке Seed: " .. seedName)
     end
 end
 
-local function Drag(input)
-    Dragging = true
-    DragStart = input.Position
-    StartPosition = ScreenGui.Position
-
-    input.Changed:Connect(function()
-        if input.UserInputState == Enum.UserInputState.End then
-            Dragging = false
+-- Выдача при нажатии
+button.MouseButton1Click:Connect(function()
+    for _, seedName in ipairs(seeds) do
+        for i = 1, 10 do
+            giveRealSeed(seedName)
         end
-    end)
-end
-
-ScreenGui.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        DragInput = input
-        Drag(input)
     end
-end)
-
-ScreenGui.InputChanged:Connect(function(input)
-    if input == DragInput then
-        Update(input)
-    end
-end)
-
-local TextButton = Instance.new("TextButton")
-TextButton.Parent = ScreenGui
-TextButton.Size = UDim2.new(0, 200, 0, 50)
-TextButton.Position = UDim2.new(0.5, -100, 0.5, -25) -- Позиция в центре экрана
-TextButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
-TextButton.TextColor3 = Color3.new(1, 1, 1)
-TextButton.Font = Enum.Font.SourceSansBold
-TextButton.TextSize = 24
-TextButton.Text = "Дюпнуть бамбук"
-
-local cooldown = false
-local seeds = {"Bamboo Seed"}
-local cooldownTime = 10 -- Задержка 10 секунд
-
-TextButton.MouseButton1Click:Connect(function()
-    if cooldown then
-        TextButton.Text = "Жди " .. cooldownTime .. " сек!"
-        return
-    end
-
-    cooldown = true
-    TextButton.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
-
-    local RemoteEvent = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Inventory"):WaitForChild("AddItem")
-    if not RemoteEvent then
-        warn("Ошибка: RemoteEvent 'AddItem' не найден!")
-        TextButton.Text = "Ошибка дюпа!"
-        cooldown = true
-        return
-    end
-
-    local success, err = pcall(function()
-        for _, seedName in pairs(seeds) do
-            RemoteEvent:FireServer(seedName, 1)
-        end
-    end)
-
-    if not success then
-        warn("Ошибка при дюпе бамбука:", err)
-    end
-
-    TextButton.Text = "Подождите " .. cooldownTime .. " сек..."
-    wait(cooldownTime)
-    TextButton.Text = "Дюпнуть бамбук"
-    TextButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
-    cooldown = false
+    button.Text = "Семена выданы!"
+    wait(2)
+    button.Text = "Выдать 10x всех семян"
 end)
